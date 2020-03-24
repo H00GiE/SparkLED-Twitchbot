@@ -3,7 +3,7 @@ Twitch chatbot for SparkLED Control Interface
 
 node.js Twitch ChatBot 
 Depends on:
--node.js (v13)
--NPM
-  - tmi.js
-  - curl-request
+	- node.js (v13)
+	- NPM
+  	- tmi.js
+  	- curl-request
