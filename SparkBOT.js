@@ -3,24 +3,26 @@ const { Curl } = require('node-libcurl');
 
 // Define configuration options
 const opts = {
-  identity: {
-    username: '<replace with your twitchbot's username>',
-    password: '<replace with your twitchbot's twitch oauth>'
+  options: { debug: true },
+  connection: {
+        secure: true,
+        reconnect: true
   },
-  channels: [
-    '<replace with the twitch channelname you want your bot to be in>'
-  ]
+  identity: {
+    username: '<bot username>',
+    password: '<oauth:token>'
+  },
+  channels: [ '<channel>' ]
 };
 // Create the lights on API command
 const curl_on = new Curl();
 
-curl_on.setOpt('URL', 'http://url of controller/api/command.On');
+curl_on.setOpt('URL', 'http://homegenie/api/HomeAutomation.ZWave/5/Control.On');
 curl_on.setOpt('FOLLOWLOCATION', true);
 
 curl_on.on('end', function (statusCode, data, headers) {
   console.info(statusCode);
-  console.info('---');
-  this.close();
+  curl_on.close();
 });
 
 curl_on.on('error', curl_on.close.bind(curl_on));
@@ -28,15 +30,22 @@ curl_on.on('error', curl_on.close.bind(curl_on));
 // Create the lights off API command
 const curl_off = new Curl();
 
-curl_off.setOpt('URL', 'http://url of controller/api/command.Off');
+curl_off.setOpt('URL', 'http://homegenie/api/HomeAutomation.ZWave/5/Control.Off');
 curl_off.setOpt('FOLLOWLOCATION', true);
 
 curl_off.on('end', function (statusCode, data, headers) {
   console.info(statusCode);
-  console.info('---');
-  this.close();
+  curl_off.close();
 });
 
+curl_off.on('error', curl_off.close.bind(curl_off));
+
+// Create a client with our options
+const client = new tmi.client(opts);
+
+// Register our event handlers (defined below)
+client.on('message', onMessageHandler);
+client.on('connected', onConnectedHandler);
 curl_off.on('error', curl_off.close.bind(curl_off));
 
 // Create a client with our options
@@ -54,25 +63,31 @@ function onMessageHandler (target, context, msg, self) {
   if (self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
-  const commandName = msg.trim();
+  const commandName = (msg.trim()).toLowerCase();
 
   // If the command is known, let's execute it
-  if (commandName === '!hello') {
-    client.say(target, `Hello to you too!`);
+  if(commandName.split(" ")[0] == '!hello') {
+    client.say(target, `@${context.username}, heya!`);
     console.log(`* Executed ${commandName} command`);
-  } else if (commandName === '!bye') {
-    client.say(target, `See you next time!`);
+  } else if (commandName.split(" ")[0] == '!bye') {
+    client.say(target, `See you next time, @${context.username}!`);
     console.log(`* Executed ${commandName} command`);
-  } else if (commandName === '!on') {
-    client.say(target, `Lights on!`);
-    curl_on.perform();
-    console.log(`* Executed ${commandName} command`);
-  } else if (commandName === '!off') {
-    client.say(target, `Lights off, oohh cozy!!`);
-    curl_off.perform();
+  } else if (commandName.split(" ")[0] == '!light') {
+    if (commandName.split(" ")[1] == 'on') {
+      client.say(target, `Lights on!`);
+      curl_on.perform();
+      }
+    else if (commandName.split(" ")[1] == 'off') {
+      client.say(target, `Lights off, oohh cozy!!`);
+      curl_off.perform();
+      }
+    else {
+      client.say(target, `What would you like to do with the lights?`);
+      client.say(target, `Usage: !lights [on/off]`);
+      }
     console.log(`* Executed ${commandName} command`);
   } else {
-    console.log(`* Unknown command ${commandName}`);
+    return;
   }
 }
 // Called every time the bot connects to Twitch chat
