@@ -5,48 +5,33 @@ const { Curl } = require('node-libcurl');
 const opts = {
   options: { debug: true },
   connection: {
-        secure: true,
-        reconnect: true
+	secure: true,
+	reconnect: true
   },
   identity: {
-    username: '<bot username>',
-    password: '<oauth:token>'
+    username: '<botusername>',
+    password: '<oauth:key>'
   },
   channels: [ '<channel>' ]
 };
-// Create the lights on API command
-const curl_on = new Curl();
-
-curl_on.setOpt('URL', 'http://server/api/command/Control.On');
-curl_on.setOpt('FOLLOWLOCATION', true);
-
-curl_on.on('end', function (statusCode, data, headers) {
-  console.info(statusCode);
-  curl_on.close();
-});
-
-curl_on.on('error', curl_on.close.bind(curl_on));
 
 // Create the lights off API command
-const curl_off = new Curl();
+function sendCommandAPI (args) {
+const curl = new Curl();
 
-curl_off.setOpt('URL', 'http://server/api/command/Control.Off');
-curl_off.setOpt('FOLLOWLOCATION', true);
+const action = args[0].charAt(0).toUpperCase() + args[0].substring(1);
+const value1 = args[1];
 
-curl_off.on('end', function (statusCode, data, headers) {
+curl.setOpt('URL', '<RESTful API URL/IP>'+action);
+curl.setOpt('FOLLOWLOCATION', true);
+
+curl.on('end', function (statusCode, data, headers) {
   console.info(statusCode);
-  curl_off.close();
+  curl.close();
 });
-
-curl_off.on('error', curl_off.close.bind(curl_off));
-
-// Create a client with our options
-const client = new tmi.client(opts);
-
-// Register our event handlers (defined below)
-client.on('message', onMessageHandler);
-client.on('connected', onConnectedHandler);
-curl_off.on('error', curl_off.close.bind(curl_off));
+curl.on('error', curl.close.bind(curl));
+curl.perform();
+} 
 
 // Create a client with our options
 const client = new tmi.client(opts);
@@ -58,34 +43,35 @@ client.on('connected', onConnectedHandler);
 // Connect to Twitch:
 client.connect();
 
-// Called every time a message comes in
-function onMessageHandler (target, context, msg, self) {
-  if (self) { return; } // Ignore messages from the bot
+// Called every time a message comes in on Twitch
+function onMessageHandler (channel, tags , message, self) {
+  if(self || !message.startsWith('!')) {
+    return;
+  } // Ignore messages NOT starting with "!" and ignore all messages from bot.
 
-  // Remove whitespace from chat message
-  const commandName = (msg.trim()).toLowerCase();
+  // make command and args work
+  const args = message.slice('!'.length).split(/\s+/);
+  const commandName = args.shift().toLowerCase();
 
   // If the command is known, let's execute it
-  if(commandName.split(" ")[0] == '!hello') {
-    client.say(target, `@${context.username}, heya!`);
+ 
+  if(commandName === 'test') {
+    client.say(channel, `@${tags.username}, I'm here and ready! copyThis pastaThat I think... `); 
+    client.say(channel, `...wait a minute, PogChamp since when can I think?!`);
     console.log(`* Executed ${commandName} command`);
-  } else if (commandName.split(" ")[0] == '!bye') {
-    client.say(target, `See you next time, @${context.username}!`);
-    console.log(`* Executed ${commandName} command`);
-  } else if (commandName.split(" ")[0] == '!light') {
-    if (commandName.split(" ")[1] == 'on') {
-      client.say(target, `Lights on!`);
-      curl_on.perform();
+  } else if (commandName === 'light') {
+    if (args[0] === 'on') {
+      client.say(channel, `Lights on!`);
+      sendCommandAPI(args);
       }
-    else if (commandName.split(" ")[1] == 'off') {
-      client.say(target, `Lights off, oohh cozy!!`);
-      curl_off.perform();
+    else if (args[0] === 'off') {
+      client.say(channel, `Lights off, oohh cozy!!`);
+      sendCommandAPI(args);
       }
     else {
-      client.say(target, `What would you like to do with the lights?`);
-      client.say(target, `Usage: !lights [on/off]`);
+      client.say(channel, `OOPS: What would you like to do with the lights?  -  Usage: !light [on/off]`);
       }
-    console.log(`* Executed ${commandName} command`);
+    console.log(`* Executed ${commandName} [${args}] command`);
   } else {
     return;
   }
