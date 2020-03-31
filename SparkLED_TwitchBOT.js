@@ -1,18 +1,20 @@
 const tmi = require('tmi.js');
 const { Curl } = require('node-libcurl');
 
-// Define configuration options
+// Define configuration options, This will soon disappear into a config file.
 const opts = {
-  options: { debug: true },
+  options: { 
+	debug: true 
+  },
   connection: {
 	secure: true,
 	reconnect: true
   },
   identity: {
-    username: '<botusername>',
-    password: '<oauth:key>'
+    	username: '<NameOf_BOT>',
+    	password: '<oauth:key>'
   },
-  channels: [ '<channel>' ]
+  channels: [ '<NameOf_CHANNEL>' ]
 };
 
 // Create the lights off API command
@@ -20,9 +22,14 @@ function sendCommandAPI (args) {
 const curl = new Curl();
 
 const action = args[0].charAt(0).toUpperCase() + args[0].substring(1);
-const value1 = args[1];
+const value1 = parseInt(args[1]);
 
-curl.setOpt('URL', '<RESTful API URL/IP>'+action);
+if (!isNaN(value1)){
+curl.setOpt('URL', 'URL/api/Control.'+action+'/'+value1);
+}
+else{
+curl.setOpt('URL', 'URL/api/Control.'+action);
+}
 curl.setOpt('FOLLOWLOCATION', true);
 
 curl.on('end', function (statusCode, data, headers) {
@@ -68,8 +75,18 @@ function onMessageHandler (channel, tags , message, self) {
       client.say(channel, `Lights off, oohh cozy!!`);
       sendCommandAPI(args);
       }
+    else if (args[0] === 'level') {
+      const value1 = parseInt(args[1]);
+      if (!isNaN(value1) && (value1 >= 0 && value1 <= 100)){
+      	client.say(channel, `I'll dim the lights to ${value1}% now!`);
+      	sendCommandAPI(args);
+	}
+      else { 
+	client.say(channel, `OOPS: Wrong value detected.  -  Usage: !light level [0-100]`);
+	}
+      }
     else {
-      client.say(channel, `OOPS: What would you like to do with the lights?  -  Usage: !light [on/off]`);
+      client.say(channel, `OOPS: What would you like to do with the lights?  -  Usage: !light [on/off/level value]`);
       }
     console.log(`* Executed ${commandName} [${args}] command`);
   } else {
